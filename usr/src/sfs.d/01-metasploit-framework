@@ -3,11 +3,11 @@
 : ${build_dir:=$(mktemp -d /tmp/msf-build.$$.XXXXXX)}
 : ${build_user:=$(getent passwd 1000 | cut -f1 -d:)}
 : ${msf_source:=https://github.com/rapid7/metasploit-framework.git}
-: ${msf_branch:=release}
+: ${msf_branch:=master}
 
 set -e -x
 
-apt-get install -y ruby-dev libpq-dev libsqlite3-dev libpq-dev libssl-dev
+apt-get install -y ruby-dev libpq-dev libsqlite3-dev libpq-dev libssl-dev libxml2-dev zlib1g-dev
 
 install -d -o $build_user -m 0755 "$build_dir"
 sudo -u $build_user git clone --depth=1 -b "$msf_branch" "$msf_source" "$build_dir"
@@ -16,7 +16,7 @@ msf_ver=$(git --git-dir="$build_dir/.git" describe --always --tags)
 msf_dir="$DESTDIR/opt/msf-$msf_ver"
 
 test -e "$msf_dir" || {
-  sudo -u $build_user sh -c 'cd "$1" ; bundle install --deployment' inst.sh "$build_dir"
+  sudo -u $build_user sh -c 'cd "$1" ; bundle install --path vendor/bundle' inst.sh "$build_dir"
 
   tar c "$build_dir" --xform "s@${build_dir#/}@opt/msf-$msf_ver@" --exclude "*/.git*" | tar x -C "$DESTDIR"
 
@@ -31,4 +31,4 @@ esac
 lnbin_sh='for f; do f="${f##*/}"; test -e "$DESTDIR/opt/bin/$f" || ln -vs msfconsole "$DESTDIR/opt/bin/$f";done'
 
 find "$DESTDIR/opt/bin" -lname "msfconsole" -type l -exec rm -v {} +
-find "$DESTDIR/opt/msf-$msf_ver" -maxdepth 1 -name "msf*" -type f -perm +1 -exec sh -c "$lnbin_sh" _ {} +
+find "$DESTDIR/opt/msf-$msf_ver" -maxdepth 1 -name "msf*" -type f -perm /1 -exec sh -c "$lnbin_sh" _ {} +
